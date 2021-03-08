@@ -81,7 +81,7 @@ Resources:
                 .then((data)=>respond())
                 .catch((e)=>respond(e));
           };
-      Timeout: 30
+      Timeout: 300
       Runtime: nodejs12.x
   S3PrefixLambdaExecutionRole:
     Type: AWS::IAM::Role

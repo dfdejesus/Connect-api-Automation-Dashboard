@@ -2,30 +2,12 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: >
   Amazon IAM Roles Creation For StackSet Implementation
 
+Parameters:
+  AdministrationRoleARNForStackset:
+    Type: String
+    Description: Enter The ARN of the AWS CloudFormation StackSet Administration Role.
+
 Resources:  
-  AdministrationRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: AWSCloudFormationStackSetAdministrationRole
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - cloudformation.amazonaws.com
-            Action:
-              - "sts:AssumeRole"
-      Path: /
-      Policies:
-        - PolicyName: AWSCloudFormationStackSetAdministrationPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: "Allow"
-                Action: "cloudformation:*"
-                Resource: "*"
-  
   AWSCloudFormationStackSetExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -35,7 +17,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !GetAtt AdministrationRole.Arn
+              AWS: !Ref AdministrationRoleARNForStackset
             Action:
               - "sts:AssumeRole"
       Path: /

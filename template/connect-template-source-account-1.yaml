@@ -30,3 +30,26 @@ Resources:
                 Action:
                   - logs:*
                 Resource: arn:aws:logs:*:*:*
+    # Create Role In Source Account Where It needs permission to execute stackset operation
+    AdministrationRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: AWSCloudFormationStackSetAdministrationRole
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - cloudformation.amazonaws.com
+              Action:
+                - "sts:AssumeRole"
+        Path: /
+        Policies:
+          - PolicyName: AWSCloudFormationStackSetAdministrationPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action: "cloudformation:*"
+                  Resource: "*"
