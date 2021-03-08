@@ -1,0 +1,309 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Set up for user creation and update Lambda functions and associated resources
+Transform: AWS::Serverless-2016-10-31
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: python3.8
+    Timeout: 15
+
+Parameters:
+  UserManagementS3BucketName:
+    Type: String
+    Description: Globally unique bucket name to create new user management bucket
+  AmazonConnectARN:
+    Type: String
+    Description: ARN of Amazon Connect instance on which to run updates
+    AllowedPattern: ^arn:aws:connect:[a-zA-Z0-9_.-]+:[0-9]{12}:+instance\/([0-9a-f]){8}-([0-9a-f]){4}-([0-9a-f]){4}-([0-9a-f]){4}-([0-9a-f]){12}$
+  NumberOfRetries:
+    Type: Number
+    Description: Number of retries on create/update failure before dumping to dead letter file
+
+Resources:
+  UserManagementS3Bucket:
+    Type: AWS::S3::Bucket
+    DependsOn:
+      - ProcessingCreateLambdaPermission
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Ref UserManagementS3BucketName
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteContentAfter7Days
+            Status: 'Enabled'
+            ExpirationInDays: 7
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt UserCreateLambdaFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                - Name: prefix
+                  Value: create/                  
+                - Name: suffix
+                  Value: .csv
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt UserUpdateLambdaFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                - Name: prefix
+                  Value: update/                  
+                - Name: suffix
+                  Value: .csv
+
+
+  S3ObjectCreatePrefixCreate:
+    Type: Custom::S3Object
+    Properties:
+      ServiceToken: !GetAtt S3ObjectPrefixFunction.Arn
+      Bucket: !Ref UserManagementS3Bucket
+      Key: 'create/'
+  S3ObjectPrefixFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: S3 Object Custom Resource to Create Prefixes (based on https://stackoverflow.com/questions/41572237/how-can-we-use-serverless-yml-to-create-an-aws-s3-bucket-and-add-a-file-to-it)
+      Handler: index.handler
+      Role: !GetAtt S3PrefixLambdaExecutionRole.Arn
+      Code:
+        ZipFile: !Sub |
+          var response = require('cfn-response');
+          var AWS = require('aws-sdk');
+          var s3 = new AWS.S3();
+          exports.handler = function(event, context) {
+            var respond = (e) => response.send(event, context, e ? response.FAILED : response.SUCCESS, e ? e : {});
+            var params = event.ResourceProperties;
+            delete params.ServiceToken;
+            s3.putObject(params).promise()
+                .then((data)=>respond())
+                .catch((e)=>respond(e));
+          };
+      Timeout: 30
+      Runtime: nodejs12.x
+  S3PrefixLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal: {Service: [lambda.amazonaws.com]}
+          Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+      - PolicyName: S3Policy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:PutObject'
+              Resource: !Sub "arn:aws:s3:::${UserManagementS3BucketName}/*"
+
+  S3ObjectUpdatePrefixCreate:
+    Type: Custom::S3Object
+    Properties:
+      ServiceToken: !GetAtt S3ObjectPrefixFunction.Arn
+      Bucket: !Ref UserManagementS3Bucket
+      Key: 'update/'
+              
+  ProcessingCreateLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref UserCreateLambdaFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub 'arn:aws:s3:::${UserManagementS3BucketName}'
+      SourceAccount: !Ref AWS::AccountId
+
+  ProcessingUpdateLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref UserUpdateLambdaFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub 'arn:aws:s3:::${UserManagementS3BucketName}'
+      SourceAccount: !Ref AWS::AccountId
+
+  UserBulkLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - python3.8
+      Content:
+        S3Bucket: aconnect-proserve-blogs
+        S3Key: CreateUpdateUsers/user-bulk-layer.zip
+      Description: Common layer underlying bulk Amazon Connect user create and update
+      LayerName: !Sub ${AWS::StackName}-user-bulk-layer
+
+  UserCreateLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-user-bulk-creation
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - !Ref UserBulkLayer
+      CodeUri:
+        Bucket: aconnect-proserve-blogs
+        Key: CreateUpdateUsers/user-bulk-creation.zip
+      Description: Takes a CSV file and creates users in Amazon Connect
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt UserCreationRole.Arn
+      Runtime: python3.8
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref UserManagementS3BucketName
+          INSTANCE_ID: !Ref AmazonConnectARN
+          NUM_RETRIES: !Ref NumberOfRetries
+
+  UserUpdateLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-user-bulk-update
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - !Ref UserBulkLayer
+      CodeUri:
+        Bucket: aconnect-proserve-blogs
+        Key: CreateUpdateUsers/user-bulk-update.zip
+      Description: Takes a CSV file and updates users in Amazon Connect
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt UserUpdateRole.Arn
+      Runtime: python3.8
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref UserManagementS3BucketName
+          INSTANCE_ID: !Ref AmazonConnectARN
+          NUM_RETRIES: !Ref NumberOfRetries
+
+  UserCreationLambdaFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${UserCreateLambdaFunction}"
+      RetentionInDays: 3
+
+  UserUpdateLambdaFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${UserUpdateLambdaFunction}"
+      RetentionInDays: 3
+
+
+#  IAM ROLES AND POLICIES - these reference the roles to avoid circular dependencies
+#
+  UserCreationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref UserCreationLambdaPolicy
+
+  UserUpdateRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref UserUpdateLambdaPolicy
+
+  UserCreationLambdaPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*:*"          
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource:
+              - !Sub 'arn:aws:s3:::${UserManagementS3BucketName}/*'
+          - Effect: Allow
+            Action:
+              - connect:CreateUser
+              - connect:UpdateUserHierarchy
+              - connect:UpdateUserIdentityInfo
+              - connect:UpdateUserPhoneConfig
+              - connect:UpdateUserRoutingProfile
+              - connect:UpdateUserSecurityProfiles
+              - connect:ListUserHierarchyGroups
+              - connect:ListRoutingProfiles
+              - connect:ListSecurityProfiles
+              - connect:ListUsers
+              - connect:DescribeUserHierarchyGroup
+              - connect:DescribeUser
+            Resource: 
+              - !Ref AmazonConnectARN
+              - !Sub "${AmazonConnectARN}/agent-group/*"
+              - !Sub "${AmazonConnectARN}/agent/*"
+              - !Sub "${AmazonConnectARN}/routing-profile/*"
+              - !Sub "${AmazonConnectARN}/security-profile/*"
+
+  UserUpdateLambdaPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*:*"
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource:
+              - !Sub 'arn:aws:s3:::${UserManagementS3BucketName}/*'
+          - Effect: Allow
+            Action:
+              - connect:CreateUser
+              - connect:UpdateUserHierarchy
+              - connect:UpdateUserIdentityInfo
+              - connect:UpdateUserPhoneConfig
+              - connect:UpdateUserRoutingProfile
+              - connect:UpdateUserSecurityProfiles
+              - connect:ListUserHierarchyGroups
+              - connect:ListRoutingProfiles
+              - connect:ListSecurityProfiles
+              - connect:ListUsers
+              - connect:DescribeUserHierarchyGroup
+              - connect:DescribeUser
+            Resource: 
+              - !Ref AmazonConnectARN
+              - !Sub "${AmazonConnectARN}/agent-group/*"
+              - !Sub "${AmazonConnectARN}/agent/*"
+              - !Sub "${AmazonConnectARN}/routing-profile/*"
+              - !Sub "${AmazonConnectARN}/security-profile/*"
