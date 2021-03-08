@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Amazon Connect Cloud Contact Center Backup and Restore Operations
+
+Parameters:
+	DefaultOutboundQueueId:
+    Type: String
+		Description: The name of the queue for the routing profile (Ensure you do have a Outbound Queue created already).
+  AmazonConnectInstanceId:
+    Description: "Enter the ID of the amazon connect instance. Check the instance ARN. The information after instance/ is the instance ID."
+    Type: String
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+    Default: "fa9e3a54-d2a2-41a6-927c-b8eb1490e08d"
+  DefaultHoursOfOperationId:
+    Type: String
+		Description: The Unique Id of the Default Hours Of Operation Associated with a Queue. (Make Sure You have default hours of opearation Created)
+  existingLambdaZipsS3Bucket:
+    Type: String
+    Default: "deployment-bucket"
+    Description: "Enter the (existing) S3 bucket name currently in use."
+  existingzipsS3KeyPrefix:
+    Type: String
+    Default: "Deployment/"
+    Description: "The Amazon S3 prefix where the lambda code files will be saved(must end in /)"
+
+RoutingProfileslambdaFunction:
+  Type: "AWS::Lambda::Function"
+  Properties:
+    Code:
+      S3Bucket: !Ref "existingLambdaZipsS3Bucket"
+      S3Key: !Join ["", [!Ref existingzipsS3KeyPrefix, 'connect_routing_profiles.zip']]
+    Description: "Function uses connect API to create routing profiles in Amazon Connect"
+    Handler: "lambda_function.lambda_handler"
+    MemorySize: 256
+    Role: !GetAtt "lambdaIAMExecutionRole.Arn"
+    Runtime: "python3.8"
+    Timeout: 300
+    Environment:
+      Variables:
+        InstanceId: !Ref "AmazonConnectInstanceId"
+        OutboundQueueId: !Ref "DefaultOutboundQueueId"
+
+ConnectQueueslambdaFunction:
+  Type: "AWS::Lambda::Function"
+  Properties:
+    Code:
+      S3Bucket: !Ref "existingLambdaZipsS3Bucket"
+      S3Key: !Join ["", [!Ref existingzipsS3KeyPrefix, 'connect_queue_config.zip']]
+    Description: "Function uses connect API to create queues in Amazon Connect cloud contact center"
+    Handler: "lambda_function.lambda_handler"
+    MemorySize: 256
+    Role: !GetAtt "lambdaIAMExecutionRole.Arn"
+    Runtime: "python3.8"
+    Timeout: 300
+    Environment:
+      Variables:
+        InstanceId: !Ref "AmazonConnectInstanceId"
+        HoursOfOperationId: !Ref DefaultHoursOfOperationId
+
+lambdaIAMExecutionRole:
+  Type: "AWS::IAM::Role"
+  Properties:
+    AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+                - "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+                Service:
+                - "lambda.amazonaws.com"
+    ManagedPolicyArns:
+      - 
+        arn:aws:iam::aws:policy/AmazonConnect_FullAccess
+    Policies:
+      - PolicyName: "lambdaIAMExecutionRoleforlogs"
+        PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "LambdaCloudwatchLogs"
+                Action:
+                    - "logs:CreateLogGroup"
+                    - "logs:CreateLogStream"
+                    - "logs:PutLogEvents"
+                Effect: "Allow"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+              - Sid: "DynamoDBCommonAccess"
+                Action:
+                  - "dynamodb:BatchGetItem"
+                  - "dynamodb:BatchWriteItem"
+                  - "dynamodb:PutItem"
+                  - "dynamodb:DeleteItem"
+                  - "dynamodb:Scan"
+                  - "dynamodb:Query"
+                  - "dynamodb:UpdateItem"
+                  - "dynamodb:CreateTable"
+                  - "dynamodb:DescribeTable"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:UpdateTable"
+                Resource: 
+                  - !Sub "arn:aws:dynamodb:*:${AWS::AccountId}:table/*"

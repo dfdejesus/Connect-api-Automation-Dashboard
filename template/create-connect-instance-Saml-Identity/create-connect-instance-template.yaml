@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Amazon Connect Cloud Contact Center Operations
+
+Parameters:
+  AmazonConnectInstanceAlias:
+    Description: "Enter the name of the amazon connect instance alias."
+    Type: String
+    Default: "Connect-Demo-2021"
+  AmazonConnectIdentityType:
+    Type : "String"
+    AllowedValues : ["SAML", "CONNECT_MANAGED", "EXISTING_DIRECTORY"]
+    Description: "Select the type of identity management for your Amazon Connect users."
+    Default: "CONNECT_MANAGED"
+  S3BucketForWebSiteAssets:
+    Type: String
+    Default:  "contact-api-dashboard"
+    AllowedPattern: '(?=^.{3,63}$)(?!^(\d+\.)+\d+$)(^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])$)'
+    Description: Enter the Existing (globally unique) name of your Amazon S3 bucket contains artifacts (Eg. federation metadata file)
+  FederationProviderName:
+    Type: String
+    Description: Name of SAML provider being created in IAM
+  FederationMetadataFile:
+    Type: String
+    Description: Name of saml metadat file containing the federation metadata
+Resources:
+  CreateAmazonConnectInstanceInvoker: 
+    Type: "Custom::CreateAmazonConnectInstanceInvoker"
+    Properties: 
+      ServiceToken: !GetAtt "HMRCAmazonConnectInstanceCreate.Arn"
+
+  HMRCAmazonConnectInstanceCreate:
+    Type: "AWS::Lambda::Function"
+    Properties:
+        Code:
+            ZipFile: |
+                import json
+                import boto3
+                import os
+                import secrets
+                import cfnresponse
+
+                connect_client = boto3.client('connect')
+                # Generates an idempotency client token
+                client_token = secrets.token_hex(16)
+
+                # Rendering Environment Variables
+                ConnectInstanceAliasName = os.environ['AmazonConnectInstanceAlias']
+                ConnectIdentityType = os.environ['AmazonConnectIdentityType']
+                def handler(event, context):
+                    responseData = {}
+                    try:
+                        response = connect_client.create_instance(
+                            ClientToken= client_token,
+                            IdentityManagementType= ConnectIdentityType,
+                            InstanceAlias= ConnectInstanceAliasName,
+                            InboundCallsEnabled= True,
+                            OutboundCallsEnabled= False
+                        )                 
+                        responseData['statusCode'] = 200
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                    except Exception as e:
+                        responseData['statusCode'] = str(e)
+                        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
+        Description: "Function to create Amazon Connect Instance using python Boto3 SDK"
+        Handler: "index.handler"
+        MemorySize: 256
+        Role: !GetAtt "AmazonConnectInstanceCreationExecutionRole.Arn"
+        Runtime: "python3.8"
+        Timeout: 900
+        Environment:
+          Variables:
+              AmazonConnectInstanceAlias: !Ref "AmazonConnectInstanceAlias"
+              AmazonConnectIdentityType: !Ref "AmazonConnectIdentityType"
+
+  AmazonConnectInstanceCreationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - 
+          arn:aws:iam::aws:policy/AmazonConnect_FullAccess
+      RoleName : AmazonConnectInstanceLambdaExecutionRole-ONY64VRKXJN2
+      Policies:
+      -
+        PolicyName: Amazon-Connect-Instance-Creation-Trigger
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            -
+              Effect: "Allow"
+              Action:
+                - 'logs:CreateLogGroup'
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+              Resource:
+                - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+  
+  CreateSAMLIdentityStack:
+      Type: AWS::CloudFormation::Stack
+      Properties:
+        TemplateURL: !Sub https://${S3BucketForWebSiteAssets}.s3.amazonaws.com/connect-saml-identity-provider.yaml
+        TimeoutInMinutes: '60'
+        Parameters:
+          FederationName: !Ref FederationProviderName
+          FederationBucket: !Ref S3BucketForWebSiteAssets
+          FederationFile: !Ref FederationMetadataFile
+
+Outputs:
+  StackRef:
+    Value: !Ref CreateSAMLIdentityStack
+  FederationProviderOutput:
+    Value: !Ref FederationProviderName       
+    Description: You can refer federation identity to any child stack.
+  FederationBucketOutput:
+    Value: !Ref S3BucketForWebSiteAssets
+  FederationMetadataFileName:
+    Value: !Ref FederationMetadataFile

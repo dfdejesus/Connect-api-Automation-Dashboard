@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Amazon Connect Cloud Contact Center Backup and Restore Operations
+
+Resources:       
+    CrossAccountIAMRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - 
+              Action: sts:AssumeRole
+              Effect: Allow
+              Principal:
+                AWS:
+                  Fn::Sub: arn:aws:iam::742925565356:root              
+              Sid: 'CrossAccount1'
+        Path: "/"
+        ManagedPolicyArns:
+          - 
+            arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        RoleName : AmazonCrossAccountRoleAccess
+    
+    CrossAccountIAMRolePolicies:
+      Type: "AWS::IAM::Policy"
+      Properties:
+        PolicyName: "AmazonCrossAccountAcessRole"
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Action: "*"
+              Resource: "*"
+        Roles:
+          - Ref: "CrossAccountIAMRole"

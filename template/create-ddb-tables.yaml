@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon Connect Cloud Contact Center Backup and Restore Operations
+
+Parameters:
+  QueueConfig:
+    Type: String
+    Description: The name of the DynamoDB Table connect queue configurations will be backed up (Ensure you do not have a table with this name already).
+  QuickConnectDetails:
+    Type: String
+    Description: The name of the DynamoDB Table where quick connects will be backed up (Ensure you do not have a table with this name already).
+  ConnectRoutingProfiles:
+    Type: String
+    Description: The name of the DynamoDB Table where routing profiles will be backed up (Ensure you do not have a table with this name already).
+
+Resources:
+  QueueConfigDDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${QueueConfig}
+      AttributeDefinitions:         
+        -
+          AttributeName: "QueueId"
+          AttributeType: "S"
+        -
+          AttributeName: "CreatedAt"
+          AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "QueueId"
+          KeyType: "HASH"
+        - 
+          AttributeName: "CreatedAt"
+          KeyType: "RANGE"
+      BillingMode: PAY_PER_REQUEST
+
+  QuickConnectConfigDDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${QuickConnectDetails}
+      AttributeDefinitions:
+        -
+          AttributeName: "QuickConnectId"
+          AttributeType: "S"
+        -
+          AttributeName: "CreatedAt"
+          AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "QuickConnectId"
+          KeyType: "HASH"
+        - 
+          AttributeName: "CreatedAt"
+          KeyType: "RANGE"
+      BillingMode: PAY_PER_REQUEST
+    
+  RoutingProfilesConfigDDBTable:
+    Type: AWS::DynamoDB::Table
+    DependsOn: "QueueConfigDDBTable"
+    Properties:
+      TableName: !Sub ${ConnectRoutingProfiles}
+      AttributeDefinitions:
+        -
+          AttributeName: "RoutingProfileid"
+          AttributeType: "S"
+        -
+          AttributeName: "CreatedAt"
+          AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "RoutingProfileid"
+          KeyType: "HASH"
+        - 
+          AttributeName: "CreatedAt"
+          KeyType: "RANGE"
+      BillingMode: PAY_PER_REQUEST

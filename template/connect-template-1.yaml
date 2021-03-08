@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Amazon Connect Cloud Contact Center Backup and Restore Operations
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - 
+        Label:
+          default: "DynamoDB Table Configuration"
+        Parameters:
+          - QueueConfigTable
+          - QuickConnectDetailsTable
+          - ConnectRoutingProfilesTable
+      - 
+        Label:
+          default: "Bucket Configuration"
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+
+Parameters:
+  AmazonAccountType:
+    Type : "String"
+    AllowedValues : 
+      - 'SAME_ACCOUNT'
+      - 'ANOTHER_ACCOUNT'
+    Description: "Select the account where you want to create the resources"
+    ConstraintDescription: must select an correct AWS account.
+    Default: "SAME_ACCOUNT"
+  AmazonTargetAccount:
+    Description: >
+        [Optional] "Enter the Id of the target AWS account. Leave Empty If you have an account type SAME_ACCOUNT"
+    Type: String
+    ConstraintDescription: Account Number Must Be of Type Integer
+  QueueConfigTable:
+      Type: String
+      Default:  "Queue_Config"
+      Description: The name of the DynamoDB Table connect queue configurations will be backed up (Ensure you do not have a table with this name already).
+  QuickConnectDetailsTable:
+    Type: String
+    Default:  "Quick_Connect_Details"
+    Description: The name of the DynamoDB Table where quick connects will be backed up (Ensure you do not have a table with this name already).
+  ConnectRoutingProfilesTable:
+    Type: String
+    Default:  "Connect_Routing_Profiles"
+    Description: The name of the DynamoDB Table where routing profiles will be backed up (Ensure you do not have a table with this name already).
+  QSS3BucketName:
+    AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
+    Default: connect-automation-cloudformation-quickstart
+    Description: "Default s3 bucket (Must be a valid bucket name)"
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: "^[0-9a-zA-Z-/]*$"
+    Default: templates/
+    Description: "s3 prefix must end with forward slash (/)."
+    Type: String
+
+Conditions:
+  UseAWSAccount: !Not
+    - !Equals
+      - !Ref AmazonAccountType
+      - 'ANOTHER_ACCOUNT'
+  UseSameAccount: !Equals
+    - !Ref AmazonAccountType
+    - 'SAME_ACCOUNT'
+Rules:
+  ValidateAWSAccount:
+    RuleCondition: !Equals
+      - !Ref AmazonAccountType
+      - 'ANOTHER_ACCOUNT'
+    Assertions:
+      - Assert: !Not 
+          - !Equals 
+            - !Ref AmazonTargetAccount
+            - ''
+        AssertDescription: Amazon Target Account ID field cannot be empty if ANOTHER_ Account type is selected
+Resources:
+    # CreateCrossAccountStack:
+    #   Condition: UseAWSAccount
+    #   Type: AWS::CloudFormation::Stack
+    #   Properties:
+    #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/connect-template-cross-account.yaml
+
+    CreateSameAccountStack:
+      Condition: UseSameAccount
+      Type: AWS::CloudFormation::Stack
+      Properties:
+        TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/connect-template-source-account-1.yaml
+
+    CrossRegionAccountStackSet:
+      Type: AWS::CloudFormation::StackSet
+      Properties:
+        StackSetName: CrossRegionAccountStackSet
+        PermissionModel: SELF_MANAGED
+        StackInstancesGroup:
+          - Regions:
+              - us-east-1
+            DeploymentTargets:
+              Accounts:
+                - !Ref AmazonTargetAccount
+        TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}create-ddb-tables.yaml
+        Parameters:
+          - ParameterKey: QueueConfig
+            ParameterValue: !Ref QueueConfigTable
+          - ParameterKey: QuickConnectDetails
+            ParameterValue: !Ref QuickConnectDetailsTable
+          - ParameterKey: ConnectRoutingProfiles
+            ParameterValue: !Ref ConnectRoutingProfilesTable
