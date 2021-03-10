@@ -3,6 +3,9 @@ Description: >
   Amazon IAM Roles Creation For StackSet Implementation
 
 Parameters:
+  SourceAccountId:
+    Type: String
+    Description: Enter The Account ID Whom you want to give permission to run stackksets.
   AdministrationRoleARNForStackset:
     Type: String
     Description: Enter The Name of the AWS CloudFormation StackSet Administration Role.
@@ -17,7 +20,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AdministrationRoleARNForStackset}"
+              AWS: !Sub "arn:${AWS::Partition}:iam::${SourceAccountId}:role/${AdministrationRoleARNForStackset}"
             Action:
               - "sts:AssumeRole"
       Path: /
