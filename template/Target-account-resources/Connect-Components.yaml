@@ -2,18 +2,47 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: >
   Amazon Connect Cloud Contact Center Backup and Restore Operations
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - 
+        Label:
+          default: "Routing Profile and Queue Configuration"
+        Parameters:
+          - DefaultOutboundQueueId
+          - DefaultHoursOfOperationId
+      - 
+        Label:
+          default: "Amazon Connect User Configuration"
+        Parameters:
+          - AmazonConnectInstanceId
+          - SecurityProfileID
+          - HierarchyGroupId
+      - 
+        Label:
+          default: "Code Files S3 Bucket Configuration"
+        Parameters:
+          - existingLambdaZipsS3Bucket
+          - existingzipsS3KeyPrefix
+
 Parameters:
-	DefaultOutboundQueueId:
-    Type: String
-		Description: The name of the queue for the routing profile (Ensure you do have a Outbound Queue created already).
   AmazonConnectInstanceId:
     Description: "Enter the ID of the amazon connect instance. Check the instance ARN. The information after instance/ is the instance ID."
     Type: String
     AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
     Default: "fa9e3a54-d2a2-41a6-927c-b8eb1490e08d"
+  DefaultOutboundQueueId:
+    Type: String
+		Description: The name of the queue for the routing profile (Ensure you do have a Outbound Queue created already).
   DefaultHoursOfOperationId:
     Type: String
 		Description: The Unique Id of the Default Hours Of Operation Associated with a Queue. (Make Sure You have default hours of opearation Created)
+  SecurityProfileID:
+    Type: String
+    Description: The identifier of the security profile for the user.
+  HierarchyGroupId:
+    Type: String
+    Description: The identifier of the hierarchy group for the user.
   existingLambdaZipsS3Bucket:
     Type: String
     Default: "deployment-bucket"
@@ -31,7 +60,7 @@ RoutingProfileslambdaFunction:
       S3Key: !Join ["", [!Ref existingzipsS3KeyPrefix, 'connect_routing_profiles.zip']]
     Description: "Function uses connect API to create routing profiles in Amazon Connect"
     Handler: "lambda_function.lambda_handler"
-    MemorySize: 256
+    MemorySize: 512
     Role: !GetAtt "lambdaIAMExecutionRole.Arn"
     Runtime: "python3.8"
     Timeout: 300

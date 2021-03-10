@@ -5,7 +5,7 @@ Description: >
 Parameters:
   SourceAccountId:
     Type: String
-    Description: Enter The Account ID Whom you want to give permission to run stackksets.
+    Description: Enter The Account ID througth you want to give permission to run stacksets.
   AdministrationRoleARNForStackset:
     Type: String
     Description: Enter The Name of the AWS CloudFormation StackSet Administration Role.
