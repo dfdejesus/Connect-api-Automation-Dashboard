@@ -22,14 +22,14 @@ Resources:
           AttributeName: "QueueId"
           AttributeType: "S"
         -
-          AttributeName: "CreatedAt"
+          AttributeName: "InstanceId"
           AttributeType: "S"
       KeySchema:
         -
-          AttributeName: "QueueId"
+          AttributeName: "InstanceId"
           KeyType: "HASH"
         - 
-          AttributeName: "CreatedAt"
+          AttributeName: "QueueId"
           KeyType: "RANGE"
       BillingMode: PAY_PER_REQUEST
 
@@ -42,14 +42,14 @@ Resources:
           AttributeName: "QuickConnectId"
           AttributeType: "S"
         -
-          AttributeName: "CreatedAt"
+          AttributeName: "InstanceId"
           AttributeType: "S"
       KeySchema:
         -
-          AttributeName: "QuickConnectId"
+          AttributeName: "InstanceId"
           KeyType: "HASH"
         - 
-          AttributeName: "CreatedAt"
+          AttributeName: "QuickConnectId"
           KeyType: "RANGE"
       BillingMode: PAY_PER_REQUEST
     
@@ -63,13 +63,13 @@ Resources:
           AttributeName: "RoutingProfileid"
           AttributeType: "S"
         -
-          AttributeName: "CreatedAt"
+          AttributeName: "InstanceId"
           AttributeType: "S"
       KeySchema:
         -
-          AttributeName: "RoutingProfileid"
+          AttributeName: "InstanceId"
           KeyType: "HASH"
         - 
-          AttributeName: "CreatedAt"
+          AttributeName: "RoutingProfileid"
           KeyType: "RANGE"
       BillingMode: PAY_PER_REQUEST

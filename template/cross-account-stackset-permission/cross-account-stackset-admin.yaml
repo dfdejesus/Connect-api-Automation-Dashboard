@@ -5,7 +5,7 @@ Description: >
 Parameters:
   AdministrationRoleARNForStackset:
     Type: String
-    Description: Enter The ARN of the AWS CloudFormation StackSet Administration Role.
+    Description: Enter The Name of the AWS CloudFormation StackSet Administration Role.
 
 Resources:  
   AWSCloudFormationStackSetExecutionRole:
@@ -17,7 +17,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Ref AdministrationRoleARNForStackset
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AdministrationRoleARNForStackset}"
             Action:
               - "sts:AssumeRole"
       Path: /

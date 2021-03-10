@@ -83,7 +83,6 @@ Resources:
     #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/connect-template-cross-account.yaml
 
     CreateSameAccountStack:
-      Condition: UseSameAccount
       Type: AWS::CloudFormation::Stack
       Properties:
         TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/connect-template-source-account-1.yaml
