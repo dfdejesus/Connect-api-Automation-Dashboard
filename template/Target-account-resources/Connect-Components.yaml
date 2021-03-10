@@ -37,10 +37,10 @@ Parameters:
   DefaultHoursOfOperationId:
     Type: String
 		Description: The Unique Id of the Default Hours Of Operation Associated with a Queue. (Make Sure You have default hours of opearation Created)
-  SecurityProfileID:
+  UserSecurityProfileID:
     Type: String
     Description: The identifier of the security profile for the user.
-  HierarchyGroupId:
+  UserHierarchyGroupId:
     Type: String
     Description: The identifier of the hierarchy group for the user.
   existingLambdaZipsS3Bucket:
