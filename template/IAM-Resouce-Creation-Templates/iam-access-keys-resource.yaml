@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Amazon Connect Cloud Contact Center Backup and Restore Operations
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - 
+        Label:
+          default: "AWS IAM User Access Key Configuration"
+        Parameters:
+          - AccessKeySerial
+          - AccessKeyStatus
+          - IAMUserName
+
+Parameters:
+  AccessKeySerial:
+    Type : "String"
+    Description: "This value is specific to CloudFormation and can only be incremented. Incrementing this value notifies CloudFormation that you want to rotate your access key. When you update your stack, CloudFormation will replace the existing access key with a new key."
+     Default: "101"
+  AccessKeyStatus:
+    Type : "String"
+    AllowedValues : 
+      - 'Active'
+      - 'Inactive'
+    Description: "Select the status of the Access Key. Active means that the key is valid for API calls, while Inactive means it is not."
+    ConstraintDescription: must select an correct AWS account.
+    Default: "Active"
+  IAMUserName:
+    Description: "Enter the The name of the IAM user that the new key will belong to"
+    Type: String
+    ConstraintDescription: Account Number Must Be of Type Integer
+    
+Resources:
+    CrossRegionAccountStackSet:      
+      Type: AWS::IAM::AccessKey
+      Properties:
+        Serial: !Ref AccessKeySerial
+        Status: !Ref AccessKeyStatus
+        UserName: !Ref IAMUserName
+        
