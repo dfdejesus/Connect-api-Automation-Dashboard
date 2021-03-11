@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >
-  Amazon Connect Cloud Contact Center Backup and Restore Operations
+  Amazon Connect Cloud Contact Center Backup and Restore Operations Using StackSets
 
 Metadata:
   AWS::CloudFormation::Interface:
