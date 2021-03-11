@@ -30,10 +30,16 @@ Parameters:
     Description: "Enter the The name of the IAM user that the new key will belong to"
     Type: String
     ConstraintDescription: Account Number Must Be of Type Integer
-    
+
+Conditions:
+  CheckAccessKeyStatus: !Equals
+      - !Ref AccessKeyStatus
+      - 'Active'
+
 Resources:
     CrossRegionAccountStackSet:      
       Type: AWS::IAM::AccessKey
+      Condition: CheckAccessKeyStatus
       Properties:
         Serial: !Ref AccessKeySerial
         Status: !Ref AccessKeyStatus
