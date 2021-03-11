@@ -20,7 +20,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Sub "arn:${AWS::Partition}:iam::${SourceAccountId}:role/${AdministrationRoleARNForStackset}"
+              AWS: !Ref SourceAccountId
             Action:
               - "sts:AssumeRole"
       Path: /
