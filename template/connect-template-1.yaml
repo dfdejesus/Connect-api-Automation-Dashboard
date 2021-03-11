@@ -7,6 +7,13 @@ Metadata:
     ParameterGroups:
       - 
         Label:
+          default: "AWS Account Configuration"
+        Parameters:
+          - AmazonAccountType
+          - AmazonTargetAccount
+          - AmazonTargetAccountRegion
+      - 
+        Label:
           default: "DynamoDB Table Configuration"
         Parameters:
           - QueueConfigTable
@@ -33,6 +40,30 @@ Parameters:
         [Optional] "Enter the Id of the target AWS account. Leave Empty If you have an account type SAME_ACCOUNT"
     Type: String
     ConstraintDescription: Account Number Must Be of Type Integer
+  AmazonTargetAccountRegion:
+    Description: >
+        [Required When type 'ANOTHER_ACCOUNT' is Selected ] "Select the Region of the target AWS account. Ignore If you have an account type SAME_ACCOUNT"
+    Type: String
+    Default: "eu-west-2"
+    AllowedValues : 
+      - 'us-east-1'
+      - 'us-east-2'
+      - 'us-west-1'
+      - 'us-west-2'
+      - 'ap-east-1'
+      - 'ap-south-1'
+      - 'ap-northeast-2'
+      - 'ap-southeast-1'
+      - 'ap-southeast-2'
+      - 'ap-northeast-1'
+      - 'sa-east-1'
+      - 'ca-central-1'
+      - 'eu-central-1'
+      - 'eu-west-1'
+      - 'eu-west-2'
+      - 'eu-west-3'
+      - 'eu-north-1'
+    ConstraintDescription: Please Select the Correct Region
   QueueConfigTable:
       Type: String
       Default:  "Queue_Config"
@@ -89,7 +120,7 @@ Resources:
         PermissionModel: SELF_MANAGED
         StackInstancesGroup:
           - Regions:
-              - us-east-1
+              - !Ref AmazonTargetAccountRegion
             DeploymentTargets:
               Accounts:
                 - !Ref AmazonTargetAccount
