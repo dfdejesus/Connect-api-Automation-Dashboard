@@ -57,8 +57,7 @@ Parameters:
     Type: String
 
 Conditions:
-  UseAWSAccount: !Not
-    - !Equals
+  UseAWSAccount: !Equals
       - !Ref AmazonAccountType
       - 'ANOTHER_ACCOUNT'
   UseSameAccount: !Equals
@@ -76,19 +75,15 @@ Rules:
             - ''
         AssertDescription: Amazon Target Account ID field cannot be empty if ANOTHER_ Account type is selected
 Resources:
-    # CreateCrossAccountStack:
-    #   Condition: UseAWSAccount
-    #   Type: AWS::CloudFormation::Stack
-    #   Properties:
-    #     TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/connect-template-cross-account.yaml
-
     CreateSameAccountStack:
       Type: AWS::CloudFormation::Stack
       Properties:
-        TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}/connect-template-source-account-1.yaml
+        TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}connect-template-source-account-1.yaml
 
-    CrossRegionAccountStackSet:
+    CrossRegionAccountStackSet:      
       Type: AWS::CloudFormation::StackSet
+      Condition: UseAWSAccount
+      DependsOn : CreateSameAccountStack
       Properties:
         StackSetName: CrossRegionAccountStackSet
         PermissionModel: SELF_MANAGED
