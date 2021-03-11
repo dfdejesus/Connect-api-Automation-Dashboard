@@ -51,5 +51,7 @@ Resources:
               Version: "2012-10-17"
               Statement:
                 - Effect: "Allow"
-                  Action: "cloudformation:*"
-                  Resource: "*"
+                  Action:
+                    - sts:AssumeRole
+                  Resource:
+                    - "arn:*:iam::*:role/AWSCloudFormationStackSetExecutionRole"
