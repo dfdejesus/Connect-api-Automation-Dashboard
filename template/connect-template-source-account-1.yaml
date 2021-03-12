@@ -55,3 +55,6 @@ Resources:
                     - sts:AssumeRole
                   Resource:
                     - "arn:*:iam::*:role/AWSCloudFormationStackSetExecutionRole"
+                - Effect: "Allow"
+                  Action: "cloudformation:*"
+                  Resource: "*"
