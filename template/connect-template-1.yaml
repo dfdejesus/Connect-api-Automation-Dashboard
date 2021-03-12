@@ -64,6 +64,10 @@ Parameters:
       - 'eu-west-3'
       - 'eu-north-1'
     ConstraintDescription: Please Select the Correct Region
+  CrossRegionStacksetName:
+      Type: String
+      Default:  "CrossAccountStackset-HKJY67HN"
+      Description: The name of the StackSet You want to created In Target AWS Account.
   QueueConfigTable:
       Type: String
       Default:  "Queue_Config"
@@ -116,7 +120,7 @@ Resources:
       Condition: UseAWSAccount
       DependsOn : CreateSameAccountStack
       Properties:
-        StackSetName: CrossRegionAccountStackSet
+        StackSetName: !Ref CrossRegionStacksetName
         PermissionModel: SELF_MANAGED
         StackInstancesGroup:
           - Regions:
