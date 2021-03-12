@@ -136,3 +136,20 @@ Resources:
             ParameterValue: !Ref QuickConnectDetailsTable
           - ParameterKey: ConnectRoutingProfiles
             ParameterValue: !Ref ConnectRoutingProfilesTable
+            
+    CrossRegionAccountStackSet:      
+      Type: AWS::CloudFormation::StackSet
+      Condition: UseAWSAccount
+      Properties:
+        StackSetName: CrossAccountIAMAccessRole
+        PermissionModel: SELF_MANAGED
+        StackInstancesGroup:
+          - Regions:
+              - !Ref AmazonTargetAccountRegion
+            DeploymentTargets:
+              Accounts:
+                - !Ref AmazonTargetAccount
+        TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}connect-template-cross-account.yaml
+        Parameters:
+          - ParameterKey: AmazonTargetAccountID
+            ParameterValue: !Ref AmazonTargetAccount

@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >
-  Amazon Connect Cloud Contact Center Backup and Restore Operations
+  Amazon Cross Account IAM Role Creation
+
+Parameters:
+  AmazonTargetAccountID:
+    Type: String
+    Description: Enter the Id of the target AWS account. Leave Empty If you have an account type SAME_ACCOUNT
 
 Resources:       
     CrossAccountIAMRole:
@@ -14,7 +19,7 @@ Resources:
               Effect: Allow
               Principal:
                 AWS:
-                  Fn::Sub: arn:aws:iam::742925565356:root              
+                  Fn::Sub: arn:aws:iam::${AmazonTargetAccount}:root              
               Sid: 'CrossAccount1'
         Path: "/"
         ManagedPolicyArns:
