@@ -67,7 +67,7 @@ Parameters:
   CrossRegionStacksetName:
       Type: String
       Default:  "CrossAccountStackset-HKJY67HN"
-      Description: The name of the StackSet You want to created In Target AWS Account.
+      Description: The name of the StackSet You want to create In Target AWS Account.
   QueueConfigTable:
       Type: String
       Default:  "Queue_Config"
