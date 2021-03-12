@@ -137,7 +137,7 @@ Resources:
           - ParameterKey: ConnectRoutingProfiles
             ParameterValue: !Ref ConnectRoutingProfilesTable
             
-    CrossRegionAccountStackSet:      
+    CrossRegionIAMRoleStackSet:      
       Type: AWS::CloudFormation::StackSet
       Condition: UseAWSAccount
       Properties:
