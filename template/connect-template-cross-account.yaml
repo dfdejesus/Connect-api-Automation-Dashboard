@@ -19,7 +19,7 @@ Resources:
               Effect: Allow
               Principal:
                 AWS:
-                  Fn::Sub: arn:aws:iam::${AmazonTargetAccount}:root              
+                  Fn::Sub: arn:aws:iam::${AWS::AccountId}:root              
               Sid: 'CrossAccount1'
         Path: "/"
         ManagedPolicyArns:

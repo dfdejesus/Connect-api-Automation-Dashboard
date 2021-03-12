@@ -150,6 +150,3 @@ Resources:
               Accounts:
                 - !Ref AmazonTargetAccount
         TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}connect-template-cross-account.yaml
-        Parameters:
-          - ParameterKey: AmazonTargetAccountID
-            ParameterValue: !Ref AmazonTargetAccount
