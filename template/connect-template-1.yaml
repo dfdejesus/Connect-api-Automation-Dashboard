@@ -12,6 +12,7 @@ Metadata:
           - AmazonAccountType
           - AmazonTargetAccount
           - AmazonTargetAccountRegion
+          - CrossRegionStacksetName
       - 
         Label:
           default: "DynamoDB Table Configuration"
